@@ -1,5 +1,5 @@
 <template>
-  <div class="percentage_parameter" data-testid="percentage-parameter">
+  <div class="percentage_parameter col-12" data-testid="percentage-parameter">
     <div class="percentage_parameter-container">
       <div class="percentage_parameter-slider">
         <vue-slider v-model="value" :min="0" :max="100" :tooltip-formatter="formatter"></vue-slider>
@@ -21,6 +21,7 @@ import VueSlider from 'vue-slider-component';
 export default class extends Vue {
   public name = 'PercentageParameter';
   public value = 0;
+  private oldValue = 0;
   private isEmitting = false;
   private t: number = null;
 
@@ -28,6 +29,7 @@ export default class extends Vue {
 
   public created(): void {
     this.value = Number(this.options.value);
+    this.oldValue = this.value;
   }
 
   public formatter(val) {
@@ -40,10 +42,15 @@ export default class extends Vue {
       clearTimeout(this.t);
     }
 
+    if (this.oldValue === this.value) {
+      return;
+    }
+
     this.isEmitting = true;
 
     this.t = setTimeout(() => {
       this.$emit('change', this.value);
+      this.oldValue = this.value;
       this.isEmitting = false;
     }, 500);
   }

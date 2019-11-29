@@ -19,7 +19,7 @@
           {{$t('users.placeholders.role')}}
         </label>
         <select
-          class="users_form-select custom-select"
+          class="users_form-select custom-select form-control"
           id="role"
           v-model="role"
         >
@@ -92,7 +92,7 @@ export default class extends Vue {
 
   @Inject() usersPermissionsService: IUsersPermissionsService;
 
-  @Prop({ type: [String, Number] }) subjectId: string;
+  @Prop({ type: String }) subjectId: string;
 
   get isEditing(): boolean {
     return !!this.subjectId;
@@ -243,7 +243,16 @@ export default class extends Vue {
   }
 
   &-select {
-    padding: .5rem;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .bmd-form-group {
+    padding-top: 1.3rem;
+
+    .bmd-label-floating {
+      top: 0;
+    }
   }
 }
 </style>

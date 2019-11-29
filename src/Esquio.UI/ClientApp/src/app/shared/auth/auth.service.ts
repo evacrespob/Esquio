@@ -1,9 +1,9 @@
+import { Ability } from '@casl/ability';
 import { injectable } from 'inversify';
 import Oidc from 'oidc-client';
-import { User, UserPermissions, defineAbilitiesFor } from '~/shared/user';
 import { settings } from '~/core';
+import { defineAbilitiesFor, User, UserPermissions } from '~/shared/user';
 import { IAuthService } from './iauth.service';
-import { Ability } from '@casl/ability';
 
 // Configure logs
 Oidc.Log.logger = window.console;
@@ -20,7 +20,7 @@ export class AuthService implements IAuthService {
   public init(): void {
     this.config = {
       authority: settings.Authority,
-      client_id: 'spa',
+      client_id: settings.ClientId,
       redirect_uri: window.location.protocol + '//' + window.location.host + '/callback',
       post_logout_redirect_uri: window.location.protocol + '//' + window.location.host,
 
@@ -95,12 +95,10 @@ export class AuthService implements IAuthService {
 
   private handleEvents(): void {
     this.manager.events.addUserLoaded(user => {
-      console.log('#response', { message: 'User loaded' });
       return this.getUser();
     });
 
     this.manager.events.addUserUnloaded(() => {
-      console.log('#response', { message: 'User logged out locally' });
       return this.getUser();
     });
 
@@ -118,7 +116,7 @@ export class AuthService implements IAuthService {
   }
 
   public async getRolesAndDefinePermissions(): Promise<void> {
-    const response = await fetch(`${settings.ApiUrl}/v1/users/my`);
+    const response = await fetch(`${settings.ApiUrl}/users/my`);
 
     if (!response.ok) {
       throw new Error('Cannot fetch permissions');

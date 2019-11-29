@@ -6,7 +6,6 @@ using Esquio.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
@@ -34,20 +33,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 opt.OnErrorBehavior = options.OnErrorBehavior;
                 opt.NotFoundBehavior = options.NotFoundBehavior;
                 opt.DefaultProductName = options.DefaultProductName;
+                opt.EvaluationSessionEnabled = options.EvaluationSessionEnabled;
             });
             builder.Services.AddScoped<IFeatureService, DefaultFeatureService>();
             builder.Services.AddScoped<IToggleTypeActivator, DefaultToggleTypeActivator>();
-            builder.Services.AddScoped<IFeatureEvaluationObserver, NoFeatureEvaluationObserver>();
+            builder.Services.AddScoped<IScopedEvaluationSession, NoScopedEvaluationSession>();
 
             builder.Services.TryAddTransient<IEnvironmentNameProviderService, NoEnvironmentNameProviderService>();
             builder.Services.TryAddTransient<IUserNameProviderService, NoUserNameProviderService>();
             builder.Services.TryAddTransient<IRoleNameProviderService, NoRoleNameProviderService>();
             builder.Services.TryAddSingleton<IValuePartitioner, DefaultValuePartitioner>();
 
-            var listener = new DiagnosticListener("Esquio");
-
-            builder.Services.AddSingleton<DiagnosticListener>(listener);
-            builder.Services.AddSingleton<DiagnosticSource>(listener);
             builder.Services.AddSingleton<EsquioDiagnostics>();
 
             builder.Services.AddTogglesFromAssemblies(options.AssembliesToRegister);

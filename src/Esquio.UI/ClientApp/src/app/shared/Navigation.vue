@@ -1,5 +1,5 @@
 <template>
-<div class="navigation">
+<header class="navigation">
   <div class="container navigation-container">
     <router-link to="/" class="navigation-title">
       {{$t('common.title')}}
@@ -8,7 +8,7 @@
       <!-- <router-link class="navigation-link navigation-link--home" :to="{ name: 'home'}" active-class="active">{{$t('common.menu.home')}}</router-link> -->
       <router-link v-if="breadcrumb.length > 0" class="navigation-link navigation-link--breadcrumb" :to="{ name: 'products-list'}" active-class="active">{{$t('common.menu.products')}}</router-link>
 
-      <router-link v-for="page in breadcrumb" :key="page.name" class="navigation-link navigation-link--breadcrumb" :to="{ name: page.name, params: {id: page.id, productId: page.productId}}" active-class="active">{{$t(`breadcrumb.${page.name}`, [page.id])}}</router-link>
+      <router-link v-for="page in breadCrumbWithFriendlyName" :key="page.name" class="navigation-link navigation-link--breadcrumb" :to="{ name: page.name, params: {id: page.id, productId: page.productId}}" active-class="active">{{page.id ? clean(page.id) : $t(`breadcrumb.${page.name}`)}}</router-link>
     </div>
     <div v-if="user" class="navigation-profile">
       <b-dropdown :text="`${user.profile.name} ${$t(user.roleName)}`" variant="outline-light">
@@ -19,7 +19,7 @@
     </b-dropdown>
     </div>
   </div>
-</div>
+</header>
 </template>
 
 <script lang="ts">
@@ -27,11 +27,14 @@ import { Component, Vue, Prop, Watch } from 'vue-property-decorator';
 import { IAuthService } from './auth';
 import { User, AbilityAction, AbilitySubject } from './user';
 import { Inject } from 'inversify-props';
-import { BreadCrumbItem, generateBreadcrumb } from './breadcrumb';
+import { BreadCrumbItem, generateBreadcrumb, cleanBreadcrumbName } from './breadcrumb';
 import { Route } from 'vue-router';
 import { ITokensService } from './tokens';
 import { AlertType } from '~/core';
 import { nextTick } from '~/core/helpers';
+import { State, namespace, Getter } from 'vuex-class';
+
+const navigationStore = namespace('navigation');
 
 @Component
 export default class extends Vue {
@@ -41,6 +44,19 @@ export default class extends Vue {
 
   @Inject() authService: IAuthService;
   @Inject() tokensService: ITokensService;
+
+  @navigationStore.State('toggleFriendlyName') toggleFriendlyName;
+
+  // Because is not in the url
+  get breadCrumbWithFriendlyName(): BreadCrumbItem[] {
+    this.breadcrumb.map(page => {
+      if (page.name === 'toggles-edit') {
+        page.id = this.toggleFriendlyName || page.id;
+      }
+    });
+
+    return this.breadcrumb;
+  }
 
   // In the future this will be it owns component
   public async onClickGenerateToken(): Promise<void> {
@@ -60,6 +76,9 @@ export default class extends Vue {
     } catch (e) {
       this.$alert(this.$t('tokens.error'), AlertType.Error);
     }
+  }
+  public clean(text: string): string {
+    return cleanBreadcrumbName(text);
   }
 
   private configureAbilities(): void {

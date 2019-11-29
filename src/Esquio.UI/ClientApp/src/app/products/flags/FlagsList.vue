@@ -9,6 +9,8 @@
       :empty-text="$t('common.empty')"
       :empty-filtered-text="$t('common.empty_filtered')"
       show-empty
+      :per-page="0"
+      :current-page="paginationInfo.pageIndex"
     >
       <div
         slot="table-busy"
@@ -28,7 +30,7 @@
             v-if="$can($constants.AbilityAction.Create, $constants.AbilitySubject.Flag)"
             class="btn btn-raised btn-primary d-inline-block"
             tag="button"
-            :to="{name: 'flags-add', params: { productId }}"
+            :to="{name: 'flags-add', params: { productName }}"
           >
             {{$t('flags.actions.add_first')}}
           </router-link>
@@ -51,7 +53,7 @@
         <div
           v-if="$can($constants.AbilityAction.Read, $constants.AbilitySubject.Flag)"
           class="text-right">
-          <router-link :to="{ name: 'flags-edit', params: { id: data.item.id, productId }}">
+          <router-link :to="{ name: 'flags-edit', params: { flagName: data.item.name, productName }}">
             <button
               type="button"
               class="btn btn-sm btn-raised btn-primary"
@@ -87,13 +89,21 @@
         </div>
       </template>
     </b-table>
+
+    <b-pagination
+      v-model="paginationInfo.pageIndex"
+      :total-rows="paginationInfo.rows"
+      :per-page="paginationInfo.pageCount"
+      @change="onChangePage"
+      align="right"
+    ></b-pagination>
   </section>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator';
 import { Inject } from 'inversify-props';
-import { CustomSwitch } from '~/shared';
+import { CustomSwitch, PaginationInfo } from '~/shared';
 import { AlertType } from '~/core';
 import { Flag } from './flag.model';
 import { IFlagsService } from './iflags.service';
@@ -107,6 +117,7 @@ export default class extends Vue {
   public name = 'FlagsList';
   public flags: Flag[] = null;
   public isLoading = true;
+  public paginationInfo = new PaginationInfo();
   public columns = [
     {
       key: 'name',
@@ -128,7 +139,7 @@ export default class extends Vue {
 
   @Inject() flagsService: IFlagsService;
 
-  @Prop({ required: true, type: [String, Number] }) productId: string;
+  @Prop({ required: true, type: String }) productName: string;
 
   public created(): void {
     this.getFlags();
@@ -150,10 +161,19 @@ export default class extends Vue {
     await this.rolloffFlag(flag);
   }
 
+  public onChangePage(page: number): void {
+    this.flags = null;
+    this.isLoading = true;
+    this.paginationInfo.pageIndex = page - 1;
+    this.getFlags();
+  }
+
   private async getFlags(): Promise<void> {
     try {
-      const response = await this.flagsService.get(Number(this.productId));
+      const response = await this.flagsService.get(this.productName, this.paginationInfo);
       this.flags = response.result;
+      this.paginationInfo.rows = response.total;
+      this.paginationInfo.pageIndex = response.pageIndex + 1;
     } catch (e) {
       this.$alert(this.$t('flags.errors.get'), AlertType.Error);
     } finally {
@@ -167,8 +187,8 @@ export default class extends Vue {
     }
 
     try {
-      await this.flagsService.remove(flag);
-      this.flags = this.flags.filter(x => x.id !== flag.id);
+      await this.flagsService.remove(this.productName, flag);
+      this.flags = this.flags.filter(x => x.name !== flag.name);
       this.$alert(this.$t('flags.success.delete'));
     } catch (e) {
       this.$alert(this.$t('flags.errors.delete'), AlertType.Error);
@@ -179,7 +199,7 @@ export default class extends Vue {
 
   private async updateFlagSwitch(flag: Flag): Promise<void> {
     try {
-      await this.flagsService.update(flag);
+      await this.flagsService.update(this.productName, flag, flag);
 
       this.$alert(!flag.enabled ? this.$t('flags.success.off') : this.$t('flags.success.on'));
     } catch (e) {
@@ -195,7 +215,7 @@ export default class extends Vue {
     }
 
     try {
-      await this.flagsService.rollout(flag);
+      await this.flagsService.rollout(this.productName, flag);
       this.$alert(this.$t('flags.success.rollout'));
       this.getFlags();
     } catch (e) {
@@ -211,7 +231,7 @@ export default class extends Vue {
     }
 
     try {
-      await this.flagsService.rollback(flag);
+      await this.flagsService.rollback(this.productName, flag);
       this.$alert(this.$t('flags.success.rolloff'));
       this.getFlags();
     } catch (e) {
